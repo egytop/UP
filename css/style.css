@@ -466,7 +466,15 @@ html[dir="ltr"] .content-shell { margin-right: 0; margin-left: var(--sidebar); }
   padding: 70px 60px;
 }
 html[dir="rtl"] .viewer-stage { inset: 0 0 0 290px; }
-.viewer-stage img { max-width: 100%; max-height: 100%; object-fit: contain; user-select: none; }
+.viewer-stage img {
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  object-position: center;
+  user-select: none;
+}
 .viewer-nav {
   position: absolute; top: 50%; transform: translateY(-50%); z-index: 3;
   width: 44px; height: 62px; border: 0; border-radius: 15px;
@@ -588,4 +596,167 @@ html[dir="rtl"] .viewer-info { right: auto; left: 0; border-left: 0; border-righ
 @media (max-width: 480px) {
   .login-card { padding: 28px 20px; border-radius: 26px; }
   .photo-grid { grid-template-columns: repeat(3, 1fr); }
+}
+
+
+/* Keep the entire image inside the visible viewer area */
+.viewer-stage {
+  overflow: hidden;
+}
+
+
+/* Multi-select + bulk album move */
+.toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.compact-toolbar {
+  justify-content: flex-end;
+}
+.bulk-toolbar {
+  position: sticky;
+  top: calc(var(--topbar-h) + 6px);
+  z-index: 18;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-wrap: wrap;
+  margin: 0 0 16px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--surface-solid) 92%, transparent);
+  box-shadow: 0 8px 28px rgba(0,0,0,.08);
+  backdrop-filter: blur(18px);
+}
+.bulk-count {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 92px;
+}
+.bulk-count strong {
+  font-size: 20px;
+}
+.bulk-count span {
+  color: var(--muted);
+  font-size: 11px;
+}
+.bulk-move-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+.bulk-move-wrap select {
+  height: 42px;
+  min-width: 180px;
+  flex: 1;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface-solid);
+  color: var(--text);
+  padding: 0 12px;
+}
+.photo-tile.selectable::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 0 solid var(--accent);
+  pointer-events: none;
+  transition: border-width .12s ease, background .12s ease;
+}
+.photo-tile.is-selected::after {
+  border-width: 4px;
+  background: rgba(10,132,255,.10);
+}
+.select-check {
+  position: absolute;
+  z-index: 5;
+  top: 7px;
+  right: 7px;
+  width: 25px;
+  height: 25px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,.95);
+  background: rgba(0,0,0,.30);
+  color: white;
+  font-size: 13px;
+  font-weight: 900;
+  box-shadow: 0 2px 8px rgba(0,0,0,.20);
+  backdrop-filter: blur(6px);
+}
+.select-check.is-checked {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+/* Viewer image link / copy / share */
+.viewer-link-block {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255,255,255,.09);
+}
+.viewer-link-block label {
+  display: block;
+  color: #a9a9af;
+  font-size: 11px;
+  margin-bottom: 7px;
+}
+.viewer-link-block input {
+  width: 100%;
+  height: 38px;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 10px;
+  background: #2c2c2e;
+  color: white;
+  padding: 0 10px;
+  font-size: 10px;
+  outline: none;
+}
+.viewer-link-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+  margin-top: 8px;
+}
+.viewer-link-btn {
+  min-height: 36px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 10px;
+  background: rgba(255,255,255,.08);
+  color: white;
+  text-decoration: none;
+  font-size: 10px;
+}
+.viewer-link-actions .viewer-link-btn:last-child {
+  grid-column: 1 / -1;
+}
+
+
+@media (max-width: 820px) {
+  .toolbar-actions { gap: 6px; }
+  .library-toolbar { align-items: center; }
+  .bulk-toolbar {
+    top: calc(var(--topbar-h) + 2px);
+    gap: 7px;
+    padding: 9px;
+  }
+  .bulk-count { min-width: auto; }
+  .bulk-move-wrap {
+    order: 5;
+    flex-basis: 100%;
+  }
+  .bulk-move-wrap select { min-width: 0; }
+  .select-check {
+    width: 23px;
+    height: 23px;
+    top: 5px;
+    right: 5px;
+  }
 }

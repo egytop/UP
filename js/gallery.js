@@ -68,3 +68,19 @@ export async function deleteAlbum(albumId, photos) {
   });
   return batch.commit();
 }
+
+
+export async function movePhotosToAlbum(photoIds, albumId) {
+  const ids = [...new Set((photoIds || []).filter(Boolean))];
+  const targetAlbumId = albumId || null;
+
+  // Firestore batches support a limited number of writes.
+  // Keep chunks comfortably below the limit.
+  for (let i = 0; i < ids.length; i += 450) {
+    const batch = writeBatch(db);
+    ids.slice(i, i + 450).forEach(photoId => {
+      batch.update(doc(db, "photos", photoId), { albumId: targetAlbumId });
+    });
+    await batch.commit();
+  }
+}

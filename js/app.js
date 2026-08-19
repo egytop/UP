@@ -2,7 +2,7 @@ import { CLOUDS, OWNER_EMAIL } from "./config.js";
 import { login, logout, watchAuth } from "./auth.js";
 import {
   watchLibrary, addPhotoRecord, setFavorite, setAlbum,
-  moveToTrash, restorePhoto, deletePhotoMetadata, createAlbum, deleteAlbum
+  moveToTrash, restorePhoto, deletePhotoMetadata, createAlbum, deleteAlbum, movePhotosToAlbum
 } from "./gallery.js";
 import { chooseCloud, cloudinaryThumb, cloudinaryDownload, uploadImage } from "./cloudinary.js";
 
@@ -62,6 +62,8 @@ const state = {
   viewerPhotoId: null,
   uploadItems: [],
   uploading: false,
+  selectionMode: false,
+  selectedIds: new Set(),
   unwatch: null
 };
 
@@ -158,6 +160,11 @@ function cycleTheme() {
 }
 
 function setView(view, albumId = null) {
+  const changingContext = state.view !== view || state.activeAlbumId !== albumId;
+  if (changingContext) {
+    state.selectionMode = false;
+    state.selectedIds.clear();
+  }
   state.view = view;
   state.activeAlbumId = albumId;
   $$(".nav-item, .mobile-nav-item").forEach(b => b.classList.toggle("is-active", b.dataset.view === view));
@@ -176,15 +183,19 @@ function setView(view, albumId = null) {
 function photoTile(photo, options = {}) {
   const fav = photo.favorite ? `<span class="heart">♥</span>` : "";
   const badge = `<span class="cloud-badge">${photo.cloudId === "cloud2" ? "C2" : "C1"}</span>`;
+  const selected = state.selectedIds.has(photo.id);
+  const selection = state.selectionMode && !options.trash
+    ? `<span class="select-check ${selected ? "is-checked" : ""}">${selected ? "✓" : ""}</span>`
+    : "";
   const trashActions = options.trash ? `
     <span class="trash-item-actions">
       <button class="mini-action" data-restore="${photo.id}">استعادة</button>
       <button class="mini-action" data-remove="${photo.id}">إزالة</button>
     </span>` : "";
   return `
-    <button class="photo-tile" data-photo-id="${photo.id}" type="button" aria-label="${escapeHtml(photo.originalFilename || "صورة")}">
+    <button class="photo-tile ${state.selectionMode && !options.trash ? "selectable" : ""} ${selected ? "is-selected" : ""}" data-photo-id="${photo.id}" type="button" aria-label="${escapeHtml(photo.originalFilename || "صورة")}">
       <img src="${escapeHtml(cloudinaryThumb(photo.secureUrl, 520))}" alt="" loading="lazy" decoding="async" />
-      ${fav}${badge}${trashActions}
+      ${selection}${fav}${badge}${trashActions}
     </button>`;
 }
 
@@ -225,6 +236,117 @@ function filterByPeriod(items) {
   return items;
 }
 
+
+function currentSelectablePhotos() {
+  let items = activePhotos();
+
+  if (state.activeAlbumId) {
+    items = items.filter(p => p.albumId === state.activeAlbumId);
+  } else if (state.view === "favorites") {
+    items = items.filter(p => p.favorite);
+  } else if (state.view === "photos") {
+    items = filterByPeriod(items);
+  }
+
+  return sortedPhotos(items);
+}
+
+function selectionBar() {
+  if (!state.selectionMode) return "";
+  const count = state.selectedIds.size;
+  const albumOptions = `<option value="">العام — بدون ألبوم</option>` +
+    state.albums
+      .sort((a,b)=>String(a.name).localeCompare(String(b.name),"ar"))
+      .map(a => `<option value="${a.id}">${escapeHtml(a.name)}</option>`)
+      .join("");
+
+  return `
+    <div class="bulk-toolbar">
+      <div class="bulk-count"><strong>${count}</strong><span>صورة محددة</span></div>
+      <button id="select-all-visible" class="secondary-btn" type="button">تحديد الكل</button>
+      <div class="bulk-move-wrap">
+        <select id="bulk-album-select" aria-label="نقل إلى ألبوم">${albumOptions}</select>
+        <button id="bulk-move-btn" class="primary-btn" type="button" ${count ? "" : "disabled"}>نقل المحدد</button>
+      </div>
+      <button id="cancel-selection" class="secondary-btn" type="button">إلغاء</button>
+    </div>`;
+}
+
+function selectionButton() {
+  return `<button id="toggle-selection" class="secondary-btn" type="button">${state.selectionMode ? "إنهاء التحديد" : "تحديد"}</button>`;
+}
+
+function toggleSelectionMode(force) {
+  state.selectionMode = typeof force === "boolean" ? force : !state.selectionMode;
+  if (!state.selectionMode) state.selectedIds.clear();
+  render();
+}
+
+function togglePhotoSelection(photoId) {
+  if (state.selectedIds.has(photoId)) state.selectedIds.delete(photoId);
+  else state.selectedIds.add(photoId);
+  render();
+}
+
+async function moveSelectedPhotos() {
+  const ids = [...state.selectedIds];
+  if (!ids.length) return;
+  const select = $("#bulk-album-select");
+  const albumId = select?.value || null;
+  const albumName = albumId
+    ? (state.albums.find(a => a.id === albumId)?.name || "الألبوم")
+    : "العام";
+
+  try {
+    await movePhotosToAlbum(ids, albumId);
+    toast(`تم نقل ${ids.length} صورة إلى ${albumName}.`);
+    state.selectedIds.clear();
+    state.selectionMode = false;
+    if (state.activeAlbumId && state.activeAlbumId !== albumId) {
+      setView("albums", state.activeAlbumId);
+    } else {
+      render();
+    }
+  } catch (err) {
+    console.error(err);
+    toast("تعذر نقل الصور. جرّب مرة أخرى.", "error");
+  }
+}
+
+async function copyText(text) {
+  const value = String(text || "");
+  try {
+    await navigator.clipboard.writeText(value);
+  } catch {
+    const ta = document.createElement("textarea");
+    ta.value = value;
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand("copy");
+    ta.remove();
+  }
+}
+
+async function sharePhoto(photo) {
+  if (!photo?.secureUrl) return;
+  if (navigator.share) {
+    try {
+      await navigator.share({
+        title: photo.originalFilename || "IEGY Photos",
+        text: photo.originalFilename || "صورة",
+        url: photo.secureUrl
+      });
+      return;
+    } catch (err) {
+      if (err?.name === "AbortError") return;
+    }
+  }
+  await copyText(photo.secureUrl);
+  toast("المشاركة المباشرة غير متاحة؛ تم نسخ رابط الصورة.");
+}
+
 function renderPhotosView() {
   const items = filterByPeriod(activePhotos());
   return `
@@ -234,15 +356,26 @@ function renderPhotosView() {
         <button data-period="months" class="${state.period === "months" ? "is-active" : ""}">الشهور</button>
         <button data-period="all" class="${state.period === "all" ? "is-active" : ""}">كل الصور</button>
       </div>
-      <div class="stat-line">${activePhotos().length} صورة · ${formatBytes(activePhotos().reduce((s,p)=>s+(Number(p.bytes)||0),0))}</div>
+      <div class="toolbar-actions">
+        ${selectionButton()}
+        <div class="stat-line">${activePhotos().length} صورة · ${formatBytes(activePhotos().reduce((s,p)=>s+(Number(p.bytes)||0),0))}</div>
+      </div>
     </div>
+    ${selectionBar()}
     ${renderPhotoLibrary(items)}
   `;
 }
 
 function renderFavoritesView() {
   const items = activePhotos().filter(p => p.favorite);
-  return renderPhotoLibrary(items, "لا توجد صور مفضلة", "اضغط ♡ داخل أي صورة لإضافتها إلى المفضلة.");
+  return `
+    <div class="library-toolbar compact-toolbar">
+      <div class="stat-line">${items.length} صورة مفضلة</div>
+      <div class="toolbar-actions">${selectionButton()}</div>
+    </div>
+    ${selectionBar()}
+    ${renderPhotoLibrary(items, "لا توجد صور مفضلة", "اضغط ♡ داخل أي صورة لإضافتها إلى المفضلة.")}
+  `;
 }
 
 function albumCover(album) {
@@ -279,8 +412,12 @@ function renderAlbumDetail(albumId) {
         <button class="secondary-btn" id="back-to-albums">← الألبومات</button>
         <button class="secondary-btn" id="delete-album-btn">حذف الألبوم</button>
       </div>
-      <div class="stat-line">${photos.length} صورة</div>
+      <div class="toolbar-actions">
+        ${selectionButton()}
+        <div class="stat-line">${photos.length} صورة</div>
+      </div>
     </div>
+    ${selectionBar()}
     ${renderPhotoLibrary(photos, "الألبوم فارغ", "ارفع صورًا أو أضف صورًا لهذا الألبوم.")}
   `;
 }
@@ -385,6 +522,10 @@ function bindDynamicEvents() {
       if (e.target.closest("[data-restore], [data-remove]")) return;
       const id = btn.dataset.photoId;
       if (state.photos.find(p => p.id === id)?.deleted) return;
+      if (state.selectionMode) {
+        togglePhotoSelection(id);
+        return;
+      }
       openViewer(id);
     });
   });
@@ -411,6 +552,17 @@ function bindDynamicEvents() {
     await deletePhotoMetadata(photo.id);
     toast("تمت إزالة السجل من الموقع.");
   }));
+
+  $("#toggle-selection")?.addEventListener("click", () => toggleSelectionMode());
+  $("#cancel-selection")?.addEventListener("click", () => toggleSelectionMode(false));
+  $("#bulk-move-btn")?.addEventListener("click", moveSelectedPhotos);
+  $("#select-all-visible")?.addEventListener("click", () => {
+    const visible = currentSelectablePhotos();
+    const allSelected = visible.length && visible.every(p => state.selectedIds.has(p.id));
+    if (allSelected) visible.forEach(p => state.selectedIds.delete(p.id));
+    else visible.forEach(p => state.selectedIds.add(p.id));
+    render();
+  });
 
   $("#search-input")?.addEventListener("input", (e) => doSearch(e.target.value));
 }
@@ -602,12 +754,28 @@ function renderViewer() {
     <div class="info-row"><span>النوع</span><span>${escapeHtml(String(photo.format || "").toUpperCase())}</span></div>
     <div class="info-row"><span>التخزين</span><span>${photo.cloudId === "cloud2" ? "Cloudinary 2" : "Cloudinary 1"}</span></div>
     <div class="info-row"><span>Cloud</span><span dir="ltr">${escapeHtml(photo.cloudName || "")}</span></div>
+
+    <div class="viewer-link-block">
+      <label for="viewer-url-input">رابط الصورة</label>
+      <input id="viewer-url-input" type="text" readonly dir="ltr" value="${escapeHtml(photo.secureUrl || "")}" />
+      <div class="viewer-link-actions">
+        <button id="copy-photo-url" class="viewer-link-btn" type="button">نسخ الرابط</button>
+        <button id="share-photo-url" class="viewer-link-btn" type="button">إرسال / مشاركة</button>
+        <a class="viewer-link-btn" href="${escapeHtml(photo.secureUrl || "#")}" target="_blank" rel="noopener">فتح</a>
+      </div>
+    </div>
+
     <select id="viewer-album-select" aria-label="الألبوم">${albumOptions}</select>
   `;
   $("#viewer-album-select")?.addEventListener("change", async (e) => {
     await setAlbum(photo.id, e.target.value || null);
     toast("تم تحديث الألبوم.");
   });
+  $("#copy-photo-url")?.addEventListener("click", async () => {
+    await copyText(photo.secureUrl || "");
+    toast("تم نسخ رابط الصورة.");
+  });
+  $("#share-photo-url")?.addEventListener("click", () => sharePhoto(photo));
   const list = currentViewerList();
   const idx = list.findIndex(p => p.id === photo.id);
   els.viewerPrev.disabled = idx <= 0;
