@@ -1,4 +1,4 @@
-const CACHE = "iegy-photos-v1";
+const CACHE = "iegy-photos-v2";
 const ASSETS = [
   "./",
   "./index.html",
