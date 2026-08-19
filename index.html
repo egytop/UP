@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#f5f5f7" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="IEGY Photos" />
+  <title>IEGY Photos</title>
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="./icons/icon-192.png" />
+  <link rel="stylesheet" href="./css/style.css" />
+</head>
+<body>
+  <div id="login-screen" class="login-screen">
+    <div class="login-glow login-glow-a"></div>
+    <div class="login-glow login-glow-b"></div>
+    <section class="login-card">
+      <div class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 64 64">
+          <rect x="5" y="5" width="54" height="54" rx="17" fill="currentColor" opacity=".08"/>
+          <path d="M17 22.5A5.5 5.5 0 0 1 22.5 17h19A5.5 5.5 0 0 1 47 22.5v19a5.5 5.5 0 0 1-5.5 5.5h-19A5.5 5.5 0 0 1 17 41.5z" fill="none" stroke="currentColor" stroke-width="3"/>
+          <circle cx="28" cy="27" r="4.5" fill="currentColor"/>
+          <path d="m19.5 42 9.2-9 6.1 5.5 4.4-4.2 5.3 7.7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div class="login-title-wrap">
+        <h1>IEGY Photos</h1>
+        <p>مكتبتك الخاصة للصور والألبومات</p>
+      </div>
+
+      <form id="login-form" autocomplete="on">
+        <label class="field">
+          <span>اسم المستخدم</span>
+          <input id="username" name="username" type="text" autocomplete="username" placeholder="up" required />
+        </label>
+        <label class="field">
+          <span>كلمة المرور</span>
+          <div class="password-wrap">
+            <input id="password" name="password" type="password" autocomplete="current-password" placeholder="••••••••" required />
+            <button id="toggle-password" class="icon-btn inside-input" type="button" title="إظهار/إخفاء كلمة المرور" aria-label="إظهار/إخفاء كلمة المرور">◉</button>
+          </div>
+        </label>
+        <button id="login-btn" class="primary-btn login-btn" type="submit">
+          <span>دخول</span>
+        </button>
+        <p id="login-error" class="form-error" role="alert"></p>
+      </form>
+      <p class="private-note">Private Gallery · Owner access only</p>
+    </section>
+  </div>
+
+  <div id="app-shell" class="app-shell is-hidden">
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-dot"></div>
+        <div>
+          <strong>IEGY Photos</strong>
+          <small>Private Library</small>
+        </div>
+      </div>
+
+      <nav id="desktop-nav" class="nav-list" aria-label="التنقل الرئيسي">
+        <button class="nav-item is-active" data-view="photos"><span class="nav-icon">▦</span><span>الصور</span></button>
+        <button class="nav-item" data-view="favorites"><span class="nav-icon">♡</span><span>المفضلة</span></button>
+        <button class="nav-item" data-view="albums"><span class="nav-icon">▣</span><span>الألبومات</span></button>
+        <button class="nav-item" data-view="search"><span class="nav-icon">⌕</span><span>بحث</span></button>
+        <button class="nav-item" data-view="trash"><span class="nav-icon">⌫</span><span>المحذوفة</span></button>
+        <button class="nav-item" data-view="storage"><span class="nav-icon">◫</span><span>التخزين</span></button>
+      </nav>
+
+      <div class="sidebar-bottom">
+        <button id="theme-btn" class="side-action" type="button"><span>◐</span><span>المظهر</span></button>
+        <button id="logout-btn" class="side-action danger-soft" type="button"><span>↪</span><span>تسجيل الخروج</span></button>
+      </div>
+    </aside>
+
+    <div class="content-shell">
+      <header class="topbar">
+        <div>
+          <p id="view-eyebrow" class="eyebrow">المكتبة</p>
+          <h1 id="view-title">الصور</h1>
+        </div>
+        <div class="top-actions">
+          <button id="new-album-btn" class="secondary-btn" type="button">+ ألبوم</button>
+          <button id="open-upload-btn" class="primary-btn" type="button">＋ رفع صور</button>
+        </div>
+      </header>
+
+      <main id="main-content" class="main-content" tabindex="-1">
+        <div class="loading-state">
+          <div class="spinner"></div>
+          <p>جاري تحميل مكتبتك…</p>
+        </div>
+      </main>
+    </div>
+
+    <nav id="mobile-nav" class="mobile-nav" aria-label="التنقل على الهاتف">
+      <button class="mobile-nav-item is-active" data-view="photos"><span>▦</span><small>الصور</small></button>
+      <button class="mobile-nav-item" data-view="albums"><span>▣</span><small>الألبومات</small></button>
+      <button class="mobile-nav-item" data-view="favorites"><span>♡</span><small>المفضلة</small></button>
+      <button class="mobile-nav-item" data-view="search"><span>⌕</span><small>بحث</small></button>
+    </nav>
+  </div>
+
+  <div id="upload-modal" class="modal is-hidden" aria-hidden="true">
+    <div class="modal-backdrop" data-close-modal="upload"></div>
+    <section class="modal-card upload-card" role="dialog" aria-modal="true" aria-labelledby="upload-title">
+      <header class="modal-header">
+        <div>
+          <p class="eyebrow">Cloudinary</p>
+          <h2 id="upload-title">رفع صور</h2>
+        </div>
+        <button class="round-close" data-close-modal="upload" type="button" aria-label="إغلاق">×</button>
+      </header>
+
+      <div id="dropzone" class="dropzone">
+        <div class="upload-cloud">↑</div>
+        <h3>اسحب الصور هنا</h3>
+        <p>أو اختر الصور من جهازك</p>
+        <button id="choose-files-btn" class="secondary-btn" type="button">اختيار الصور</button>
+        <input id="file-input" type="file" accept="image/*" multiple hidden />
+      </div>
+
+      <div class="upload-options">
+        <label class="field compact">
+          <span>الألبوم</span>
+          <select id="upload-album"></select>
+        </label>
+        <label class="field compact">
+          <span>مكان الرفع</span>
+          <select id="upload-cloud">
+            <option value="auto">تلقائي — الأقل استخدامًا</option>
+            <option value="cloud1">Cloudinary 1 · ism39suv</option>
+            <option value="cloud2">Cloudinary 2 · fe48faaa</option>
+          </select>
+        </label>
+      </div>
+
+      <div id="upload-summary" class="upload-summary is-hidden">
+        <div>
+          <strong id="upload-count">0 صورة</strong>
+          <span id="upload-total-size">0 MB</span>
+        </div>
+        <div class="total-progress"><i id="upload-total-progress"></i></div>
+      </div>
+
+      <div id="upload-queue" class="upload-queue"></div>
+
+      <footer class="modal-footer">
+        <button class="secondary-btn" data-close-modal="upload" type="button">إغلاق</button>
+        <button id="start-upload-btn" class="primary-btn" type="button" disabled>ابدأ الرفع</button>
+      </footer>
+    </section>
+  </div>
+
+  <div id="album-modal" class="modal is-hidden" aria-hidden="true">
+    <div class="modal-backdrop" data-close-modal="album"></div>
+    <section class="modal-card small-modal" role="dialog" aria-modal="true" aria-labelledby="album-modal-title">
+      <header class="modal-header">
+        <div>
+          <p class="eyebrow">تنظيم</p>
+          <h2 id="album-modal-title">ألبوم جديد</h2>
+        </div>
+        <button class="round-close" data-close-modal="album" type="button" aria-label="إغلاق">×</button>
+      </header>
+      <form id="album-form">
+        <label class="field">
+          <span>اسم الألبوم</span>
+          <input id="album-name" type="text" maxlength="80" placeholder="مثال: الإسكندرية 2026" required />
+        </label>
+        <footer class="modal-footer no-pad">
+          <button class="secondary-btn" data-close-modal="album" type="button">إلغاء</button>
+          <button class="primary-btn" type="submit">إنشاء الألبوم</button>
+        </footer>
+      </form>
+    </section>
+  </div>
+
+  <div id="viewer-modal" class="viewer is-hidden" aria-hidden="true">
+    <div class="viewer-top">
+      <button id="viewer-close" class="viewer-btn" type="button" aria-label="إغلاق">×</button>
+      <div class="viewer-actions">
+        <button id="viewer-favorite" class="viewer-btn" type="button" title="المفضلة">♡</button>
+        <a id="viewer-download" class="viewer-btn" href="#" target="_blank" rel="noopener" title="تنزيل">↓</a>
+        <button id="viewer-trash" class="viewer-btn" type="button" title="حذف">⌫</button>
+      </div>
+    </div>
+    <button id="viewer-prev" class="viewer-nav viewer-prev" type="button" aria-label="السابق">‹</button>
+    <div class="viewer-stage">
+      <img id="viewer-image" alt="" />
+    </div>
+    <button id="viewer-next" class="viewer-nav viewer-next" type="button" aria-label="التالي">›</button>
+    <aside id="viewer-info" class="viewer-info"></aside>
+  </div>
+
+  <div id="toast-stack" class="toast-stack" aria-live="polite"></div>
+
+  <script type="module" src="./js/app.js"></script>
+</body>
+</html>
